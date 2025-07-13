@@ -1,53 +1,92 @@
 // services/AccountService.ts
-import { Account } from "@/models/Account";
-
-const BASE_URL = "http://localhost:3002/accounts";
+import api, { AccountResponse, AccountDetailResponse } from '@/lib/api';
+import { Account } from '@/models/Account';
+import { Transaction, TransactionData } from '@/models/Transaction';
+import { AxiosError } from 'axios';
 
 export class AccountService {
-  // Busca todas as contas
+  // Busca todas as contas do usuário autenticado
   static async getAll(): Promise<Account[]> {
-    const res = await fetch(BASE_URL);
-    const data = await res.json();
-    return data.map(Account.fromJSON);
+    try {
+      const response = await api.get<AccountResponse[]>('/accounts');
+      return response.data.map(Account.fromJSON);
+    } catch {
+      throw new Error('Erro ao buscar contas');
+    }
   }
 
-  // Busca conta por ID
-  static async getById(id: number): Promise<Account> {
-    const res = await fetch(`${BASE_URL}/${id}`);
-    const data = await res.json();
-    return Account.fromJSON(data);
+  // Busca conta por ID com transações
+  static async getById(id: number): Promise<{ account: Account; transactions: Transaction[] }> {
+    try {
+      const response = await api.get<AccountDetailResponse>(`/accounts/${id}`);
+      const data = response.data;
+
+      return {
+        account: Account.fromJSON({
+          id: data.id,
+          name: data.name,
+          balance: data.balance,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+        }),
+        transactions: data.transactions.map(tx => Transaction.fromJSON(tx as TransactionData))
+      };
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.status === 404) {
+        throw new Error('Conta não encontrada');
+      }
+      throw new Error('Erro ao buscar conta');
+    }
   }
 
-  // Cria uma nova conta (não envia id, json-server gera)
-  static async create(account: Account): Promise<Account> {
-    const body = { name: account.name };
-
-    const res = await fetch(BASE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    const data = await res.json();
-    return Account.fromJSON(data);
+  // Cria uma nova conta
+  static async create(name: string): Promise<Account> {
+    try {
+      const response = await api.post<AccountResponse>('/accounts', { name });
+      return Account.fromJSON(response.data);
+    } catch (error) {
+      const axiosError = error as AxiosError<{ errors?: Record<string, string[]> }>;
+      if (axiosError.response?.status === 422) {
+        const errors = axiosError.response.data.errors;
+        if (errors?.name) {
+          throw new Error(errors.name[0]);
+        }
+      }
+      throw new Error('Erro ao criar conta');
+    }
   }
 
-  // Atualiza conta existente pelo ID
-  static async update(account: Account): Promise<Account> {
-    if (!account.id) throw new Error("Conta precisa de ID para atualizar.");
-
-    const res = await fetch(`${BASE_URL}/${account.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(account.toJSON()),
-    });
-
-    const data = await res.json();
-    return Account.fromJSON(data);
+  // Atualiza conta existente
+  static async update(id: number, name: string): Promise<Account> {
+    try {
+      const response = await api.put<AccountResponse>(`/accounts/${id}`, { name });
+      return Account.fromJSON(response.data);
+    } catch (error) {
+      const axiosError = error as AxiosError<{ errors?: Record<string, string[]> }>;
+      if (axiosError.response?.status === 404) {
+        throw new Error('Conta não encontrada');
+      }
+      if (axiosError.response?.status === 422) {
+        const errors = axiosError.response.data.errors;
+        if (errors?.name) {
+          throw new Error(errors.name[0]);
+        }
+      }
+      throw new Error('Erro ao atualizar conta');
+    }
   }
 
   // Deleta conta pelo ID
   static async delete(id: number): Promise<void> {
-    await fetch(`${BASE_URL}/${id}`, { method: "DELETE" });
+    try {
+      await api.delete(`/accounts/${id}`);
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.status === 404) {
+        throw new Error('Conta não encontrada');
+      }
+      throw new Error('Erro ao deletar conta');
+    }
   }
 }

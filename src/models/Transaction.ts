@@ -1,51 +1,72 @@
 import { TransactionType } from "./TransactionType";
 
-interface TransactionJSON {
-  id?: number;
-  description: string;
+export interface TransactionData {
+  id: number;
+  type: 'INCOME' | 'EXPENSE';
   amount: number;
-  type: TransactionType;
-  date: string | Date;
+  account_id: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export class Transaction {
-  public id?: number;
-  public description: string;
-  public amount: number;
+  public id: number;
   public type: TransactionType;
-  public date: Date;
+  public amount: number;
+  public account_id: number;
+  public created_at: string;
+  public updated_at: string;
 
-  constructor(
-    description: string,
-    amount: number,
-    type: TransactionType,
-    id?: number,
-    date?: Date
-  ) {
-    this.description = description;
-    this.amount = amount;
-    this.type = type;
-    if (id !== undefined) this.id = id;
-    this.date = date ?? new Date();
+  constructor(data: TransactionData) {
+    this.id = data.id;
+    this.type = data.type === 'INCOME' ? TransactionType.INCOME : TransactionType.EXPENSE;
+    this.amount = data.amount;
+    this.account_id = data.account_id;
+    this.created_at = data.created_at;
+    this.updated_at = data.updated_at;
   }
 
-  static fromJSON(data: TransactionJSON): Transaction {
-    return new Transaction(
-      data.description,
-      data.amount,
-      data.type,
-      data.id,
-      new Date(data.date)
-    );
+  static fromJSON(data: TransactionData): Transaction {
+    return new Transaction(data);
   }
 
-  toJSON() {
+  toJSON(): TransactionData {
     return {
       id: this.id,
-      description: this.description,
+      type: this.type === TransactionType.INCOME ? 'INCOME' : 'EXPENSE',
       amount: this.amount,
-      type: this.type,
-      date: this.date.toISOString(),
+      account_id: this.account_id,
+      created_at: this.created_at,
+      updated_at: this.updated_at,
     };
+  }
+
+  // Formatação de valor para exibição
+  getFormattedAmount(): string {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(this.amount);
+  }
+
+  // Formatação de data para exibição
+  getFormattedDate(): string {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(this.created_at));
+  }
+
+  // Verifica se é uma receita
+  isIncome(): boolean {
+    return this.type === TransactionType.INCOME;
+  }
+
+  // Verifica se é uma despesa
+  isExpense(): boolean {
+    return this.type === TransactionType.EXPENSE;
   }
 }

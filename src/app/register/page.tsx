@@ -1,45 +1,74 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import Button from "@/components/button";
 import Link from "next/link";
 
 export default function Register() {
-  const { register } = useAuth();
-  const router = useRouter();
+  const { register, loading, isAuthenticated } = useAuth();
   const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Redireciona se já estiver logado
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      window.location.href = "/dashboard";
+    }
+  }, [isAuthenticated, loading]);
+
+  // Mostra loading enquanto verifica autenticação
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#47A138] mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    if (!name.trim()) {
-      return alert("Digite um nome válido");
+    e.preventDefault();
+
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      alert("Por favor, preencha todos os campos");
+      return;
     }
 
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+    if (password !== confirmPassword) {
+      alert("As senhas não coincidem");
+      return;
+    }
+
+    if (password.length < 6) {
+      alert("A senha deve ter pelo menos 6 caracteres");
+      return;
+    }
 
     try {
-      await register(name);
-      router.push("/dashboard");
+      await register(name, email, password);
+      window.location.href = "/dashboard";
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Erro ao registrar.");
-      }
-    } finally {
-      setLoading(false);
+      // Os erros já são tratados pelo AuthContext com toast
+      console.error("Erro no registro:", err);
+    }
+  };
+
+  const handleButtonClick = () => {
+    const form = document.querySelector("form");
+    if (form) {
+      form.requestSubmit();
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center  px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-sm shadow-xl p-4 bg-white">
         <CardHeader>
           <CardTitle className="text-center text-[#47A138]">
@@ -49,27 +78,52 @@ export default function Register() {
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input
-              placeholder="Nome da conta"
+              type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              disabled={loading}
+              placeholder="Nome completo"
               className="border border-[#47A138]"
+              required
             />
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="border border-[#47A138]"
+              required
+            />
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Senha (mínimo 6 caracteres)"
+              className="border border-[#47A138]"
+              required
+            />
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirmar senha"
+              className="border border-[#47A138]"
+              required
+            />
             <Button
-              type="submit"
-              className="w-full  h-12 bg-transparent border border-[#47A138] text-[#47A138] hover:bg-[#d9f3d542] "
-              disabled={loading}
-            >
-              {loading ? "Registrando..." : "Registrar"}
-            </Button>
-            <Link href="/login" className="text-center text-[#47A138]">
-              Fazer Login
-            </Link>
-            <Link href="/" className="text-center text-[#47A138]">
-              Voltar
-            </Link>
+              text={loading ? "Criando conta..." : "Criar conta"}
+              colors="green"
+              className="w-full"
+              onClick={handleButtonClick}
+            />
           </form>
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Já tem uma conta?{" "}
+              <Link href="/login" className="text-[#47A138] hover:underline">
+                Faça login
+              </Link>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

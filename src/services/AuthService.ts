@@ -1,41 +1,127 @@
 // services/AuthService.ts
-import { Account } from "@/models/Account";
-
-const BASE_URL = "http://localhost:3002/accounts";
+import api, {
+    LoginRequest,
+    RegisterRequest,
+    AuthResponse,
+    UserResponse
+} from '@/lib/api';
+import { UserModel } from '@/models/User';
+import { Account } from '@/models/Account';
+import { AxiosError } from 'axios';
 
 export class AuthService {
-    // Simula login: busca conta pelo nome
-    static async login(name: string): Promise<Account> {
-        const res = await fetch(`${BASE_URL}?name=${name.toLowerCase()}`);
-        if (!res.ok) throw new Error("Erro ao buscar conta");
+    // Login com email e senha
+    static async login(email: string, password: string): Promise<{ user: UserModel; token: string }> {
+        try {
+            const loginData: LoginRequest = { email, password };
+            const response = await api.post<AuthResponse>('/login', loginData);
 
-        const data = await res.json();
+            const { user, access_token } = response.data;
 
-        if (data.length === 0) {
-            throw new Error("Conta não encontrada.");
+            // Salvar token no localStorage
+            localStorage.setItem('auth_token', access_token);
+            localStorage.setItem('user_data', JSON.stringify(user));
+
+            return {
+                user: UserModel.fromJSON(user),
+                token: access_token
+            };
+        } catch (error) {
+            const axiosError = error as AxiosError;
+            if (axiosError.response?.status === 401) {
+                throw new Error('Credenciais inválidas');
+            }
+            throw new Error('Erro ao fazer login. Tente novamente.');
         }
-
-        return Account.fromJSON(data[0]);
     }
 
-    // Simula registro: verifica se já existe e cria se não
-    static async register(name: string): Promise<Account> {
-        const existing = await fetch(`${BASE_URL}?name=${name.toLowerCase()}`);
-        const existingData = await existing.json();
+    // Registro com nome, email e senha
+    static async register(name: string, email: string, password: string): Promise<{ user: UserModel; account: Account }> {
+        try {
+            const registerData: RegisterRequest = { name, email, password };
+            const response = await api.post<AuthResponse>('/register', registerData);
 
-        if (existingData.length > 0) {
-            throw new Error("Essa conta já existe.");
+            const { user, access_token } = response.data;
+
+            // Salvar token no localStorage
+            localStorage.setItem('auth_token', access_token);
+            localStorage.setItem('user_data', JSON.stringify(user));
+
+            // Buscar dados completos do usuário (incluindo contas)
+            const userDataResponse = await api.get<UserResponse>('/me');
+            const { accounts } = userDataResponse.data;
+
+            return {
+                user: UserModel.fromJSON(user),
+                account: Account.fromJSON(accounts[0]) // Primeira conta criada
+            };
+        } catch (error) {
+            const axiosError = error as AxiosError<{ errors?: Record<string, string[]> }>;
+            if (axiosError.response?.status === 422) {
+                const errors = axiosError.response.data.errors;
+                if (errors?.email) {
+                    throw new Error('Este email já está em uso');
+                }
+                if (errors?.password) {
+                    throw new Error('A senha deve ter pelo menos 6 caracteres');
+                }
+            }
+            throw new Error('Erro ao registrar usuário. Tente novamente.');
         }
+    }
 
-        const res = await fetch(BASE_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: name.toLowerCase() }),
-        });
+    // Logout
+    static async logout(): Promise<void> {
+        try {
+            await api.post('/logout');
+        } catch (error) {
+            // Mesmo se a requisição falhar, limpar dados locais
+            console.warn('Erro ao fazer logout no servidor:', error);
+        } finally {
+            // Limpar dados locais
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_data');
+        }
+    }
 
-        if (!res.ok) throw new Error("Erro ao registrar conta.");
+    // Obter dados do usuário atual
+    static async getCurrentUser(): Promise<{ user: UserModel; accounts: Account[] }> {
+        try {
+            const response = await api.get<UserResponse>('/me');
+            const { user, accounts } = response.data;
 
-        const data = await res.json();
-        return Account.fromJSON(data);
+            return {
+                user: UserModel.fromJSON(user),
+                accounts: accounts.map(Account.fromJSON)
+            };
+        } catch (error) {
+            console.error('Erro no getCurrentUser:', error);
+            throw new Error('Erro ao buscar dados do usuário');
+        }
+    }
+
+    // Verificar se o usuário está autenticado
+    static isAuthenticated(): boolean {
+        const token = localStorage.getItem('auth_token');
+        return !!token;
+    }
+
+    // Obter token do localStorage
+    static getToken(): string | null {
+        return localStorage.getItem('auth_token');
+    }
+
+    // Obter dados do usuário do localStorage
+    static getUserFromStorage(): UserModel | null {
+        const userData = localStorage.getItem('user_data');
+        if (userData) {
+            try {
+                return UserModel.fromJSON(JSON.parse(userData));
+            } catch (error) {
+                console.error('Erro ao parsear dados do usuário:', error);
+                return null;
+            }
+        }
+        return null;
     }
 }
