@@ -29,6 +29,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const initializeAuth = async () => {
       try {
         const token = AuthService.getToken();
+
+        console.log(
+          "🔍 Verificando autenticação no MFE Auth:",
+          token ? "EXISTE" : "NÃO EXISTE"
+        );
+
         if (token) {
           // Tenta carregar dados do usuário do localStorage primeiro
           const storedUser = AuthService.getUserFromStorage();
@@ -38,18 +44,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
           // Depois busca dados atualizados do servidor
           await refreshUserData();
-
-          // Se está nas páginas de login/register e está autenticado, redireciona
-          if (typeof window !== "undefined") {
-            const currentPath = window.location.pathname;
-            if (
-              currentPath === "/login" ||
-              currentPath === "/register" ||
-              currentPath === "/"
-            ) {
-              window.location.href = "/dashboard";
-            }
-          }
         }
       } catch (error) {
         console.error("Erro ao inicializar autenticação:", error);
@@ -66,12 +60,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { user: loggedUser } = await AuthService.login(email, password);
+      const { user: loggedUser, token } = await AuthService.login(
+        email,
+        password
+      );
       setUser(loggedUser);
       toast.success("Login realizado com sucesso!");
-      // Redireciona para a dashboard após login bem-sucedido
+
+      // ENVIA APENAS O TOKEN PARA O MFE CORE
       if (typeof window !== "undefined") {
-        window.location.href = "/dashboard";
+        console.log("📤 Enviando token para MFE Core após login");
+        window.parent.postMessage(
+          {
+            type: "AUTH_SUCCESS",
+            token: token,
+          },
+          "*"
+        );
       }
     } catch (error) {
       const errorMessage =
@@ -95,6 +100,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setAccounts([account]);
 
       toast.success("Conta criada com sucesso!");
+
+      // ENVIA APENAS O TOKEN PARA O MFE CORE APÓS REGISTRO
+      if (typeof window !== "undefined") {
+        const token = AuthService.getToken();
+        console.log("📤 Enviando token para MFE Core após registro");
+        window.parent.postMessage(
+          {
+            type: "AUTH_SUCCESS",
+            token: token,
+          },
+          "*"
+        );
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Erro ao registrar usuário";
@@ -107,13 +125,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = async () => {
     try {
+      console.log("🚪 Iniciando logout...");
       await AuthService.logout();
-      toast.success("Logout realizado com sucesso!");
-    } catch (error) {
-      console.error("Erro ao fazer logout:", error);
-    } finally {
       setUser(null);
       setAccounts([]);
+
+      toast.success("Logout realizado com sucesso!");
+
+      // COMUNICA LOGOUT PARA O MFE CORE
+      if (typeof window !== "undefined") {
+        console.log("📤 Enviando mensagem de logout para MFE Core");
+        window.parent.postMessage({ type: "AUTH_LOGOUT" }, "*");
+      }
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+      // Mesmo com erro, limpa os dados e comunica
+      setUser(null);
+      setAccounts([]);
+
+      if (typeof window !== "undefined") {
+        console.log("📤 Enviando mensagem de logout para MFE Core (após erro)");
+        window.parent.postMessage({ type: "AUTH_LOGOUT" }, "*");
+      }
     }
   };
 

@@ -18,9 +18,15 @@ export class AuthService {
 
             const { user, access_token } = response.data;
 
+            console.log("🔑 Login bem-sucedido:");
+            console.log("  - access_token:", access_token ? "EXISTE" : "NÃO EXISTE");
+            console.log("  - user:", user);
+
             // Salvar token no localStorage
             localStorage.setItem('auth_token', access_token);
             localStorage.setItem('user_data', JSON.stringify(user));
+
+            console.log("💾 Token salvo no localStorage:", localStorage.getItem('auth_token') ? "SUCESSO" : "FALHOU");
 
             return {
                 user: UserModel.fromJSON(user),
@@ -43,9 +49,15 @@ export class AuthService {
 
             const { user, access_token } = response.data;
 
+            console.log("🔑 Registro bem-sucedido:");
+            console.log("  - access_token:", access_token ? "EXISTE" : "NÃO EXISTE");
+            console.log("  - user:", user);
+
             // Salvar token no localStorage
             localStorage.setItem('auth_token', access_token);
             localStorage.setItem('user_data', JSON.stringify(user));
+
+            console.log("💾 Token salvo no localStorage:", localStorage.getItem('auth_token') ? "SUCESSO" : "FALHOU");
 
             // Buscar dados completos do usuário (incluindo contas)
             const userDataResponse = await api.get<UserResponse>('/me');
@@ -81,6 +93,7 @@ export class AuthService {
             // Limpar dados locais
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user_data');
+            console.log("🧹 Dados limpos do localStorage");
         }
     }
 
@@ -103,6 +116,7 @@ export class AuthService {
     // Verificar se o usuário está autenticado
     static isAuthenticated(): boolean {
         const token = localStorage.getItem('auth_token');
+        console.log("🔍 Verificando autenticação - token:", token ? "EXISTE" : "NÃO EXISTE");
         return !!token;
     }
 
