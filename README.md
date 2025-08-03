@@ -13,6 +13,14 @@ O MFE Auth é responsável por toda a autenticação do ByteBank, oferecendo log
 - **Segurança**: Gerenciamento seguro de sessões
 - **UX**: Interface intuitiva para autenticação
 
+### ENV
+
+```
+NEXT_PUBLIC_API_URL = "http://localhost:8000/api"
+NEXT_PUBLIC_MF_URL_DASHBOARD = "http://localhost:3003"
+
+```
+
 ### Estrutura de Pastas
 ```
 src/
