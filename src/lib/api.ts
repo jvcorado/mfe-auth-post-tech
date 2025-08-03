@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 
 // Criar instância do axios
 const api: AxiosInstance = axios.create({
-    baseURL: '/api',
+    baseURL: '/mf',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
