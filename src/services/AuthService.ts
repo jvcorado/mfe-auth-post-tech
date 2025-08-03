@@ -58,9 +58,15 @@ export class AuthService {
             localStorage.setItem('user_data', JSON.stringify(user));
 
             console.log("💾 Token salvo no localStorage:", localStorage.getItem('auth_token') ? "SUCESSO" : "FALHOU");
+            console.log("💾 Token completo:", access_token);
 
             // Buscar dados completos do usuário (incluindo contas)
-            const userDataResponse = await api.get<UserResponse>('/me');
+            // Configurar o token manualmente para esta requisição
+            const userDataResponse = await api.get<UserResponse>('/me', {
+                headers: {
+                    'Authorization': `Bearer ${access_token}`
+                }
+            });
             const { accounts } = userDataResponse.data;
 
             return {

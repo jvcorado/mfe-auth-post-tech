@@ -113,6 +113,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           "*"
         );
       }
+
+      // Aguarda um pouco para garantir que o estado seja atualizado
+      await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Erro ao registrar usuário";

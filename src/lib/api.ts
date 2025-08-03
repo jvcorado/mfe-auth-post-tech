@@ -17,6 +17,9 @@ api.interceptors.request.use(
         const token = localStorage.getItem('auth_token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+            console.log("🔑 Token adicionado à requisição:", token.substring(0, 10) + "...");
+        } else {
+            console.log("⚠️ Nenhum token encontrado para a requisição");
         }
         return config;
     },

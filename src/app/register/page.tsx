@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Button from "@/components/button";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Register() {
   const { register, loading, isAuthenticated } = useAuth();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,7 +19,7 @@ export default function Register() {
   // Redireciona se já estiver logado
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      window.location.href = "/dashboard";
+      router.push("/dashboard");
     }
   }, [isAuthenticated, loading]);
 
@@ -53,7 +55,10 @@ export default function Register() {
 
     try {
       await register(name, email, password);
-      window.location.href = "/dashboard";
+      // Aguarda um pouco para garantir que o estado seja atualizado
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 200);
     } catch (err: unknown) {
       // Os erros já são tratados pelo AuthContext com toast
       console.error("Erro no registro:", err);
