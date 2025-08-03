@@ -1,12 +1,9 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import toast from 'react-hot-toast';
 
-// Configuração base da API
-const API_BASE_URL = 'http://localhost:8000/api';
-
 // Criar instância do axios
 const api: AxiosInstance = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: '/api',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
