@@ -273,8 +273,8 @@ vercel --prod
 
 ### Variáveis de Ambiente
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8000/api
-NEXT_PUBLIC_CORE_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL = "https://byte-bank-api.onrender.com/api"
+NEXT_PUBLIC_MF_URL_DASHBOARD = "http://localhost:3001"
 ```
 
 ## 📱 Responsividade
